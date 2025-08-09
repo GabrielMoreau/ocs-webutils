@@ -1,0 +1,171 @@
+#!/bin/bash
+#
+# ocs-pkgpush
+#
+# 2025/08/07 Gabriel Moreau <Gabriel.Moreau@univ-grenoble-alpes.fr>
+
+# 📦 Préparation de l'environnement virtuel
+CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}"
+if [ ! -e "$CACHE_DIR/ocs-utils/venv/bin/activate" ] || [ ! -e "$CACHE_DIR/ocs-utils/venv/bin/playwright" ]
+then
+    (
+        mkdir -p "$CACHE_DIR/ocs-utils"
+        echo 'playwright' > "$CACHE_DIR/ocs-utils/requirements.txt"
+        python3 -m venv "$CACHE_DIR/ocs-utils/venv"
+        source "$CACHE_DIR/ocs-utils/venv/bin/activate"
+        pip install --upgrade -r "$CACHE_DIR/ocs-utils/requirements.txt"
+        playwright install
+    )
+fi
+
+# 🔹 Active le venv
+source "$CACHE_DIR/ocs-utils/venv/bin/activate"
+
+# 🐍 Script Python inline
+exec python3 - "$@" <<'END_PYTHON'
+import os
+import sys
+import argparse
+import getpass
+import asyncio
+from playwright.async_api import async_playwright
+
+cache_dir = os.getenv("XDG_CACHE_HOME") or os.path.expanduser("~/.cache")
+SESSION_FILE = os.path.join(cache_dir, "ocs-utils", "session_state.json")
+
+def prompt_from_tty(prompt, hide=False):
+    """Demande une saisie depuis le terminal, même si stdin est non interactif."""
+    with open("/dev/tty", "r") as tty_in, open("/dev/tty", "w") as tty_out:
+        if hide:
+            import getpass
+            return getpass.getpass(prompt, stream=tty_out)
+        else:
+            tty_out.write(prompt)
+            tty_out.flush()
+            return tty_in.readline().strip()
+
+async def session_is_valid(url):
+    """Vérifie si la session sauvegardée est encore valide."""
+    if not os.path.exists(SESSION_FILE):
+        return False
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(headless=True, args=["--ignore-certificate-errors"])
+        context = await browser.new_context(storage_state=SESSION_FILE, ignore_https_errors=True)
+        page = await context.new_page()
+        await page.goto(f"{url}/?function=tele_build")
+        valid = not await page.locator('input[name="LOGIN"]').is_visible()
+        await browser.close()
+        return valid
+
+async def main():
+    parser = argparse.ArgumentParser(description="Push d'un paquet dans OCS Inventory")
+    parser.add_argument("--url", required=True, help="URL d'OCS Inventory (ex: https://serveur/ocsreports)")
+    parser.add_argument("--username", help="Nom d'utilisateur OCS (optionnel si session valide)")
+    parser.add_argument("--password", help="Mot de passe OCS (optionnel si session valide)")
+    parser.add_argument("--name", required=True, help="Nom du paquet")
+    parser.add_argument("--description", required=True, help="Description du paquet")
+    parser.add_argument("--priority", required=True, help="Priorité du paquet (valeur dans <select>)")
+    parser.add_argument("--notif-text", required=True, help="Texte de notification")
+    parser.add_argument("--notif-delay", required=True, help="Délai avant notification")
+    parser.add_argument("--file", required=True, help="Chemin du fichier à uploader")
+    parser.add_argument("--headless", action="store_true", help="Exécuter sans interface graphique")
+    args = parser.parse_args()
+
+    # Vérification que le fichier à uploader existe
+    if not os.path.isfile(args.file):
+        print(f"❌ Erreur : le fichier '{args.file}' est introuvable.")
+        sys.exit(1)
+
+    need_login = not await session_is_valid(args.url)
+
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(headless=args.headless, args=["--ignore-certificate-errors"])
+        if need_login:
+            print("🔐 Session invalide ou absente → connexion nécessaire")
+            if not args.username:
+                args.username = prompt_from_tty("Nom d'utilisateur OCS: ")
+            if not args.password:
+                args.password = prompt_from_tty("Mot de passe OCS: ", hide=True)
+
+            context = await browser.new_context(ignore_https_errors=True)
+            page = await context.new_page()
+            await page.goto(args.url)
+            await page.fill('input[name="LOGIN"]', args.username)
+            await page.fill('input[name="PASSWD"]', args.password)
+            await page.click('input[name="Valid_CNX"]')
+            await page.wait_for_load_state('networkidle')
+
+            if await page.locator('input[name="LOGIN"]').is_visible():
+                print("❌ Échec du login")
+                await browser.close()
+                sys.exit(1)
+
+            # Sauvegarder l'état de session
+            os.makedirs(os.path.dirname(SESSION_FILE), exist_ok=True)
+            await context.storage_state(path=SESSION_FILE)
+            print("✅ Session sauvegardée")
+        else:
+            print("♻️  Session existante valide → réutilisation")
+            context = await browser.new_context(storage_state=SESSION_FILE, ignore_https_errors=True)
+            page = await context.new_page()
+
+        # 3️⃣ ALLER SUR LA PAGE tele_build
+        await page.goto(f"{args.url}/?function=tele_build")
+        await page.wait_for_load_state('networkidle')
+
+        # 4️⃣ CLIQUER SUR WINDOWS
+        await page.click('text=Windows')
+        await page.wait_for_load_state('networkidle')
+
+        # 5️⃣ CLIQUER SUR OTHERS
+        await page.click('text=OTHERS')
+        await page.wait_for_load_state('networkidle')
+
+        # 6️⃣ CLIQUER SUR CUSTOM
+        await page.click('text=Custom')
+        await page.wait_for_load_state('networkidle')
+
+        # 7️⃣ RÉCUPÉRER LE TOKEN CSRF UNIQUEMENT DU FORM CUSTOM
+        form_custom = page.locator("form").filter(has=page.locator('input[name="NAME"]'))
+        csrf_elem = form_custom.locator('input[name^="CSRF_"]').first
+        csrf_name = await csrf_elem.get_attribute("name")
+        csrf_value = await csrf_elem.get_attribute("value")
+        print(f"🔑 CSRF récupéré : {csrf_name} = {csrf_value}")
+
+        # 8️⃣ REMPLIR LE FORMULAIRE
+        # Attendre que le champ DESCRIPTION apparaisse
+        await page.wait_for_selector('input[name="NAME"]', timeout=10000)
+        await page.fill('input[name="NAME"]', args.name)
+        await page.fill('input[name="DESCRIPTION"]', args.description)
+        await page.select_option('select[name="PROTO"]', 'HTTP')
+        await page.select_option('select[name="PRI"]', args.priority)
+        await page.select_option('select[name="ACT"]', 'EXECUTE')
+        await page.fill('input[name="pathfile"]', 'install.bat')
+        # Upload fichier
+        # Juste avant upload fichier
+        #await page.wait_for_selector('input[name="additionalfiles"]', timeout=10000)
+        #await page.locator('input[name="additionalfiles"]').scroll_into_view_if_needed()
+        await page.set_input_files('input[name="additionalfiles"]', args.file)
+        await page.select_option('select[name="NOTIFY_USER"]', 'YES')
+        await page.fill('input[name="NOTIFY_TEXT"]', args.notif_text)
+        await page.fill('input[name="NOTIFY_COUNTDOWN"]', args.notif_delay)
+        await page.select_option('select[name="NOTIFY_CAN_DELAY"]', 'YES')
+        await page.screenshot(path="tmp_package_submission1.png")
+        print("📸 Capture enregistrée : tmp_package_submission1.png")
+
+        # 9️⃣ SOUMETTRE
+        await page.locator('input[type="submit"]').scroll_into_view_if_needed()
+        await page.screenshot(path="tmp_package_submission2.png")
+        print("📸 Capture enregistrée : tmp_package_submission2.png")
+        await page.click('input[type="submit"]', timeout=900000)
+
+        # 🔟 CAPTURE POUR CONFIRMATION
+        await page.wait_for_load_state('networkidle')
+        await page.screenshot(path="tmp_package_submit_result.png")
+        print("📸 Capture enregistrée : tmp_package_submit_result.png")
+        print(f"📦 Paquet soumis avec succès : {args.name}")
+
+        await browser.close()
+
+asyncio.run(main())
+END_PYTHON
