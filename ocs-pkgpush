@@ -29,6 +29,7 @@ import argparse
 import getpass
 import asyncio
 from playwright.async_api import async_playwright
+from playwright._impl._errors import TimeoutError as PlaywrightTimeoutError, Error as PlaywrightError
 
 cache_dir = os.getenv("XDG_CACHE_HOME") or os.path.expanduser("~/.cache")
 SESSION_FILE = os.path.join(cache_dir, "ocs-utils", "session_state.json")
@@ -57,6 +58,41 @@ async def session_is_valid(url):
         await browser.close()
         return valid
 
+async def safe_goto(page, url, timeout=30000):
+    """
+    Essaie de naviguer vers l'URL et retourne :
+    - True si OK
+    - False si erreur réseau ou timeout
+    """
+    try:
+        await page.goto(url, timeout=timeout)
+        return True
+    except PlaywrightTimeoutError:
+        print(f"❌ Impossible d'accéder à {url} (délai dépassé).")
+        print("💡 Vérifie ta connexion réseau ou ton VPN.")
+        return False
+    except PlaywrightError as e:
+        print(f"❌ Erreur lors de l'accès à {url} : {e}")
+        print("💡 Vérifie si le serveur est accessible et si le VPN est actif.")
+        return False
+
+async def session_is_valid(url):
+    if not os.path.exists(SESSION_FILE):
+        return False
+
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(headless=True, args=["--ignore-certificate-errors"])
+        context = await browser.new_context(storage_state=SESSION_FILE, ignore_https_errors=True)
+        page = await context.new_page()
+
+        if not await safe_goto(page, f"{url}/?function=tele_build", timeout=15000):
+            await browser.close()
+            return None  # serveur inaccessible
+
+        valid = not await page.locator('input[name="LOGIN"]').is_visible()
+        await browser.close()
+        return valid
+
 async def main():
     parser = argparse.ArgumentParser(description="Push d'un paquet dans OCS Inventory")
     parser.add_argument("--url", required=True, help="URL d'OCS Inventory (ex: https://serveur/ocsreports)")
@@ -76,11 +112,17 @@ async def main():
         print(f"❌ Erreur : le fichier '{args.file}' est introuvable.")
         sys.exit(1)
 
-    need_login = not await session_is_valid(args.url)
+    valid_state = await session_is_valid(args.url)
 
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=args.headless, args=["--ignore-certificate-errors"])
-        if need_login:
+        if valid_state is None:
+            sys.exit(1)  # problème réseau → arrêt immédiat
+        elif valid_state is True:
+            print("♻️  Session existante valide → réutilisation")
+            context = await browser.new_context(storage_state=SESSION_FILE, ignore_https_errors=True)
+            page = await context.new_page()
+        else:
             print("🔐 Session invalide ou absente → connexion nécessaire")
             if not args.username:
                 args.username = prompt_from_tty("Nom d'utilisateur OCS: ")
@@ -89,7 +131,10 @@ async def main():
 
             context = await browser.new_context(ignore_https_errors=True)
             page = await context.new_page()
-            await page.goto(args.url)
+            #await page.goto(args.url)
+            if not await safe_goto(page, args.url):
+                await browser.close()
+                sys.exit(1)
             await page.fill('input[name="LOGIN"]', args.username)
             await page.fill('input[name="PASSWD"]', args.password)
             await page.click('input[name="Valid_CNX"]')
@@ -104,35 +149,31 @@ async def main():
             os.makedirs(os.path.dirname(SESSION_FILE), exist_ok=True)
             await context.storage_state(path=SESSION_FILE)
             print("✅ Session sauvegardée")
-        else:
-            print("♻️  Session existante valide → réutilisation")
-            context = await browser.new_context(storage_state=SESSION_FILE, ignore_https_errors=True)
-            page = await context.new_page()
 
-        # 3️⃣ ALLER SUR LA PAGE tele_build
+        # ALLER SUR LA PAGE tele_build
         await page.goto(f"{args.url}/?function=tele_build")
         await page.wait_for_load_state('networkidle')
 
-        # 4️⃣ CLIQUER SUR WINDOWS
+        # CLIQUER SUR WINDOWS
         await page.click('text=Windows')
         await page.wait_for_load_state('networkidle')
 
-        # 5️⃣ CLIQUER SUR OTHERS
+        # CLIQUER SUR OTHERS
         await page.click('text=OTHERS')
         await page.wait_for_load_state('networkidle')
 
-        # 6️⃣ CLIQUER SUR CUSTOM
+        # CLIQUER SUR CUSTOM
         await page.click('text=Custom')
         await page.wait_for_load_state('networkidle')
 
-        # 7️⃣ RÉCUPÉRER LE TOKEN CSRF UNIQUEMENT DU FORM CUSTOM
+        # RÉCUPÉRER LE TOKEN CSRF UNIQUEMENT DU FORM CUSTOM
         form_custom = page.locator("form").filter(has=page.locator('input[name="NAME"]'))
         csrf_elem = form_custom.locator('input[name^="CSRF_"]').first
         csrf_name = await csrf_elem.get_attribute("name")
         csrf_value = await csrf_elem.get_attribute("value")
         print(f"🔑 CSRF récupéré : {csrf_name} = {csrf_value}")
 
-        # 8️⃣ REMPLIR LE FORMULAIRE
+        # REMPLIR LE FORMULAIRE
         # Attendre que le champ DESCRIPTION apparaisse
         await page.wait_for_selector('input[name="NAME"]', timeout=10000)
         await page.fill('input[name="NAME"]', args.name)
@@ -153,17 +194,32 @@ async def main():
         await page.screenshot(path="tmp_package_submission1.png")
         print("📸 Capture enregistrée : tmp_package_submission1.png")
 
-        # 9️⃣ SOUMETTRE
+        # SOUMETTRE
         await page.locator('input[type="submit"]').scroll_into_view_if_needed()
         await page.screenshot(path="tmp_package_submission2.png")
         print("📸 Capture enregistrée : tmp_package_submission2.png")
-        await page.click('input[type="submit"]', timeout=900000)
-
-        # 🔟 CAPTURE POUR CONFIRMATION
-        await page.wait_for_load_state('networkidle')
-        await page.screenshot(path="tmp_package_submit_result.png")
-        print("📸 Capture enregistrée : tmp_package_submit_result.png")
-        print(f"📦 Paquet soumis avec succès : {args.name}")
+        #await page.click('input[type="submit"]', timeout=900000)
+        try:
+            await page.click('input[type="submit"]', timeout=0)
+            # CAPTURE POUR CONFIRMATION
+            await page.wait_for_load_state('networkidle', timeout=300000)  # 15 min
+            await page.screenshot(path="tmp_package_submit_result.png")
+            print("📸 Capture enregistrée : tmp_package_submit_result.png")
+            print(f"📦 Paquet soumis avec succès : {args.name}")
+        except PlaywrightTimeoutError:
+            print("⏳ Temps d’attente dépassé lors de l'upload.")
+            print(f"❌ Paquet en échec : {args.name}️")
+            await page.screenshot(path="tmp_package_submit_timeout.png")
+            print("📸 Capture: tmp_package_submit_timeout.png")
+            # decide what to do: exit non-zero, or continue
+            await browser.close()
+            sys.exit(1)
+        except PlaywrightError as e:
+            print(f"❌ Erreur Playwright pendant la soumission : {e}")
+            await page.screenshot(path="tmp_package_submit_error.png")
+            print("📸 Capture: tmp_package_submit_error.png")
+            await browser.close()
+            sys.exit(1)
 
         await browser.close()
 
