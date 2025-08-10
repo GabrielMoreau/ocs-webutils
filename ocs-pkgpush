@@ -28,6 +28,7 @@ import sys
 import argparse
 import getpass
 import asyncio
+from pathlib import Path
 from playwright.async_api import async_playwright
 from playwright._impl._errors import TimeoutError as PlaywrightTimeoutError, Error as PlaywrightError
 
@@ -99,12 +100,25 @@ async def main():
     parser.add_argument("--notif-delay", required=True, help="Delay before notification")
     parser.add_argument("--file", required=True, help="Path to the file to upload")
     parser.add_argument("--headless", action="store_true", help="Run without GUI")
+    parser.add_argument("--capture-dir", help="Directory to save screenshots (optional)")
     args = parser.parse_args()
 
     # Check if the file to upload exists
     if not os.path.isfile(args.file):
         print(f"❌ Error: file '{args.file}' not found.")
         sys.exit(1)
+
+    # Prepare capture directory if requested
+    capture_dir = None
+    if args.capture_dir:
+        capture_dir = Path(args.capture_dir)
+        capture_dir.mkdir(parents=True, exist_ok=True)
+
+    async def capture(page, filename):
+        if capture_dir:
+            path = capture_dir / filename
+            await page.screenshot(path=str(path))
+            print(f"📸 Screenshot saved: {path}")
 
     valid_state = await session_is_valid(args.url)
 
@@ -184,31 +198,26 @@ async def main():
         await page.fill('input[name="NOTIFY_TEXT"]', args.notif_text)
         await page.fill('input[name="NOTIFY_COUNTDOWN"]', args.notif_delay)
         await page.select_option('select[name="NOTIFY_CAN_DELAY"]', 'YES')
-        await page.screenshot(path="tmp_package_submission1.png")
-        print("📸 Screenshot saved: tmp_package_submission1.png")
+        await capture(page, "tmp_package_submission1.png")
 
         # SUBMIT
         await page.locator('input[type="submit"]').scroll_into_view_if_needed()
-        await page.screenshot(path="tmp_package_submission2.png")
-        print("📸 Screenshot saved: tmp_package_submission2.png")
+        await capture(page, "tmp_package_submission2.png")
         try:
             await page.click('input[type="submit"]', timeout=0)
             # Confirmation capture
             await page.wait_for_load_state('networkidle', timeout=300000)  # 15 min
-            await page.screenshot(path="tmp_package_submit_result.png")
-            print("📸 Screenshot saved: tmp_package_submit_result.png")
+            await capture(page, "tmp_package_submit_result.png")
             print(f"📦 Package successfully submitted: {args.name}")
         except PlaywrightTimeoutError:
             print("⏳ Timeout exceeded during file upload.")
             print(f"❌ Package failed: {args.name}️")
-            await page.screenshot(path="tmp_package_submit_timeout.png")
-            print("📸 Screenshot: tmp_package_submit_timeout.png")
+            await capture(page, "tmp_package_submit_timeout.png")
             await browser.close()
             sys.exit(1)
         except PlaywrightError as e:
             print(f"❌ Playwright error during submission: {e}")
-            await page.screenshot(path="tmp_package_submit_error.png")
-            print("📸 Screenshot: tmp_package_submit_error.png")
+            await capture(page, "tmp_package_submit_error.png")
             await browser.close()
             sys.exit(1)
 
