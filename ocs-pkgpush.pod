@@ -2,7 +2,8 @@
 
 ocs-pkgpush - Push a package to OCS Inventory
 
-=head1 SYNOPSIS
+=head1 [--help|-h] --url URL [--username USERNAME] [--password PASSWORD] --name NAME --description DESCRIPTION --priority PRIORITY --notif-text NOTIF_TEXT --notif-delay NOTIF_DELAY --file FILE [--headless]
+         [--capture-dir CAPTURE_DIR]
 
 ocs-pkgpush [options]
 
@@ -90,6 +91,7 @@ Push a package with a given priority and notification:
 =head1 SEE ALSO
 
 L<python3(1)>, L<playwright>
+
 
 =head1 AUTHORS
 
