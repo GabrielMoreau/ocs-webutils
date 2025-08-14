@@ -1,0 +1,103 @@
+=head1 NAME
+
+ocs-pkgpush - Push a package to OCS Inventory
+
+=head1 SYNOPSIS
+
+ocs-pkgpush [options]
+
+=head1 DESCRIPTION
+
+B<ocs-pkgpush> is a Python-based command line tool to upload and configure packages in OCS Inventory.  
+It can reuse an existing login session or prompt for credentials if needed.  
+The tool also supports automated form filling and file uploading via Playwright.
+
+=head1 OPTIONS
+
+=over 4
+
+=item B<--url> I<URL>
+
+OCS Inventory URL (e.g. https://server/ocsreports). (Required)
+
+=item B<--username> I<USER>
+
+OCS username (optional if a valid session already exists).
+
+=item B<--password> I<PASS>
+
+OCS password (optional if a valid session already exists).
+
+=item B<--name> I<NAME>
+
+Package name. (Required)
+
+=item B<--description> I<TEXT>
+
+Package description. (Required)
+
+=item B<--priority> I<PRI>
+
+Package priority (value from the OCS Inventory <select> list). (Required)
+
+=item B<--notif-text> I<TEXT>
+
+Notification text shown to the end user. (Required)
+
+=item B<--notif-delay> I<SECONDS>
+
+Delay before the notification is shown. (Required)
+
+=item B<--file> I<PATH>
+
+Path to the file to upload. (Required)
+
+=item B<--headless>
+
+Run without showing the browser GUI.
+
+=item B<--capture> I<DIR>
+
+If specified, enables screenshots and saves them in the given directory.
+
+=back
+
+=head1 EXIT STATUS
+
+=over 4
+
+=item 0
+
+Successful execution.
+
+=item non-zero
+
+An error occurred (e.g. network error, login failed, file not found).
+
+=back
+
+=head1 EXAMPLES
+
+Push a package with a given priority and notification:
+
+  ocs-pkgpush --url https://ocs.example.com/ocsreports \
+    --username admin --password secret \
+    --name MyPackage --description "Installs stuff" \
+    --priority 1 --notif-text "Update incoming" \
+    --notif-delay 60 --file ./install.zip
+
+
+=head1 SEE ALSO
+
+L<python3(1)>, L<playwright>
+
+=head1 AUTHORS
+
+Written by Gabriel Moreau <Gabriel.Moreau(A)univ-grenoble-alpes.fr> - Grenoble - France
+
+
+=head1 LICENSE AND COPYRIGHT
+
+License GNU GPL version 2
+
+ Copyright (C) 2025, LEGI UMR 5519 / CNRS UGA G-INP, Grenoble, France
