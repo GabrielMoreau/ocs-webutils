@@ -1,0 +1,77 @@
+#!/bin/bash
+#
+# 2025/08/14 Gabriel Moreau <Gabriel.Moreau@univ-grenoble-alpes.fr>
+
+trap '[ -n "${tmp_folder}" -a -d "${tmp_folder}" ] && rm -rf "${tmp_folder}"' QUIT
+
+export PATH=/bin:/sbin:/usr/bin:/usr/sbin
+export LANG=C
+
+tmp_folder=$(mktemp --directory /tmp/ocs-webutils-XXXXXX)
+{ [ -n "${tmp_folder}" ] && [ -d "${tmp_folder}" ] ; } || exit 1
+
+# Set Name and Version
+PKG_NAME=ocs-webutils
+CODE_VERSION=$(grep '__version__' ocs-pkgpush | cut -f 2 -d '"') #'
+PKG_VERSION=1
+
+# Documentations
+pod2man ocs-pkgpush.pod | gzip > "${tmp_folder}/ocs-pkgpush.1.gz"
+#pod2html --css podstyle.css --index --header ocs-pkgpush.pod > "${tmp_folder}/ocs-pkgpush.html"
+
+# Create future tree
+mkdir -p "${tmp_folder}/usr/bin"
+mkdir -p ${tmp_folder}/usr/share/man/man1
+#mkdir -p ${tmp_folder}/usr/share/ocs-utils
+#mkdir -p ${tmp_folder}/etc/bash_completion.d
+cp ocs-pkgpush                  "${tmp_folder}/usr/bin/"
+cp ocs-pkgpush.1.gz             "${tmp_folder}/usr/share/man/man1/"
+cp LICENSE.txt                  "${tmp_folder}/usr/share/ocs-utils/"
+#cp ocs-webutils.bash_completion  ${tmp_folder}/etc/bash_completion.d/
+chmod -R a+rx        "${tmp_folder}/usr/bin/ocs-pkgpush"
+chmod -R a+rX,go-w   "${tmp_folder}/usr"
+#chmod -R a+rX,go-w   ${tmp_folder}/etc
+
+# Data archive
+rm -f "${tmp_folder}/data.tar.gz"
+#(cd ${tmp_folder}; tar --owner root --group root -czf data.tar.gz ./usr ./etc)
+(cd "${tmp_folder}"; tar --owner root --group root -czf data.tar.gz ./usr)
+
+# Control file
+cat <<END > "${tmp_folder}/control"
+Package: ${PKG_NAME}
+Version: ${CODE_VERSION}-${PKG_VERSION}
+Section: utils
+Tag: implemented-in::python, interface::commandline, role::program, works-with::file, network::client, protocol::http
+Priority: optional
+Depends: python3 (>= 3.9), python3-venv, python3-pip, ca-certificates
+Recommends: python3-dev, build-essential
+Architecture: all
+Installed-Size: $(du -ks "${tmp_folder}"|cut -f 1)
+Maintainer: Gabriel Moreau <Gabriel.Moreau@univ-grenoble-alpes.fr>
+Description: Push packages to OCS Inventory via web interface automation
+ This tool automates the process of uploading a package to an OCS Inventory
+ server using Playwright in Python.
+ It supports session reuse, CSRF token handling, and file upload with
+ notification configuration.
+Homepage: https://gricad-gitlab.univ-grenoble-alpes.fr/legi/soft/trokata/ocs-webutils
+END
+
+# Control archive
+rm -f "${tmp_folder}/control.tar.gz"
+(cd "${tmp_folder}"; tar --owner root --group root -czf control.tar.gz control)
+
+# Format deb package
+echo 2.0 > "${tmp_folder}/debian-binary"
+
+# Create package (control before data)
+ar -r "${PKG_NAME}_${CODE_VERSION}-${PKG_VERSION}_all.deb" "${tmp_folder}/debian-binary" "${tmp_folder}/control.tar.gz" "${tmp_folder}/data.tar.gz"
+      
+# Clean
+rm -rf "${tmp_folder}"
+
+# Prepare reprepro upload
+echo "# Prepare reprepro upload"
+echo "( cd /srv/www/debian/ ; reprepro includedeb bookworm ~/bookworm/${PKG_NAME}_${CODE_VERSION}-${PKG_VERSION}_all.deb )"
+echo "( cd /srv/www/debian/ ; reprepro includedeb trixie     ~/trixie/${PKG_NAME}_${CODE_VERSION}-${PKG_VERSION}_all.deb )"
+echo "( cd /srv/www/debian/ ; reprepro dumpreferences ) | grep -i ocs-webutils"
