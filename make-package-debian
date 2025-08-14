@@ -15,17 +15,19 @@ PKG_NAME=ocs-webutils
 CODE_VERSION=$(grep '__version__' ocs-pkgpush | cut -f 2 -d '"') #'
 PKG_VERSION=1
 
-# Documentations
-pod2man ocs-pkgpush.pod | gzip > "${tmp_folder}/ocs-pkgpush.1.gz"
-#pod2html --css podstyle.css --index --header ocs-pkgpush.pod > "${tmp_folder}/ocs-pkgpush.html"
-
 # Create future tree
 mkdir -p "${tmp_folder}/usr/bin"
 mkdir -p ${tmp_folder}/usr/share/man/man1
-#mkdir -p ${tmp_folder}/usr/share/ocs-utils
+mkdir -p ${tmp_folder}/usr/share/ocs-utils
 #mkdir -p ${tmp_folder}/etc/bash_completion.d
+
+# Documentations
+pod2man ocs-pkgpush.pod | gzip > "${tmp_folder}/usr/share/man/man1/ocs-pkgpush.1.gz"
+#pod2html --css podstyle.css --index --header ocs-pkgpush.pod > "${tmp_folder}/ocs-pkgpush.html"
+
+# Copy files
 cp ocs-pkgpush                  "${tmp_folder}/usr/bin/"
-cp ocs-pkgpush.1.gz             "${tmp_folder}/usr/share/man/man1/"
+#cp ocs-pkgpush.1.gz             "${tmp_folder}/usr/share/man/man1/"
 cp LICENSE.txt                  "${tmp_folder}/usr/share/ocs-utils/"
 #cp ocs-webutils.bash_completion  ${tmp_folder}/etc/bash_completion.d/
 chmod -R a+rx        "${tmp_folder}/usr/bin/ocs-pkgpush"
