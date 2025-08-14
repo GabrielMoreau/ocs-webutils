@@ -126,7 +126,6 @@ async def main():
         browser = await p.chromium.launch(headless=args.headless, args=["--ignore-certificate-errors"])
         if valid_state is None:
             # Network/server problem detected while checking session → abort early
-            print("❌ Network or server unreachable while checking session. Exiting.")
             await browser.close()
             sys.exit(1)
         elif valid_state is True:
