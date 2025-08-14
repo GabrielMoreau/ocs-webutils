@@ -1,0 +1,38 @@
+# bash completion for ocs-pkgpush
+
+_ocs_pkgpush()
+{
+    local cur prev opts
+    COMPREPLY=()
+    cur="${COMP_WORDS[COMP_CWORD]}"
+    prev="${COMP_WORDS[COMP_CWORD-1]}"
+
+    # Liste des options reconnues
+    opts="--url --username --password --name --description --priority \
+        --notif-text --notif-delay --file --headless --capture"
+
+    case "${prev}" in
+        --file|--capture)
+            # Pour --file et --capture : compléter avec des fichiers / dossiers
+            COMPREPLY=( $(compgen -f -- "$cur") )
+            return 0
+            ;;
+        --url)
+            # Exemple : on propose juste https:// par défaut
+            COMPREPLY=( $(compgen -W "https://" -- "$cur") )
+            return 0
+            ;;
+        --priority)
+            # Valeurs possibles à adapter selon l'OCS
+            COMPREPLY=( $(compgen -W "1 2 3 4 5 6 7 8" -- "$cur") )
+            return 0
+            ;;
+        *)
+            # Complétion des options
+            COMPREPLY=( $(compgen -W "${opts}" -- "$cur") )
+            return 0
+            ;;
+    esac
+}
+
+complete -F _ocs_pkgpush ocs-pkgpush
