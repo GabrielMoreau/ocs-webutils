@@ -9,7 +9,7 @@ _ocs_pkgpush()
 
     # Liste des options reconnues
     opts="--url --username --password --name --description --priority \
-        --notif-text --notif-delay --file --headless --capture"
+        --notif-text --notif-duration --file --headless --capture"
 
     case "${prev}" in
         --file|--capture)

@@ -11,7 +11,7 @@ usage: - [-h] \
 	--description DESCRIPTION \
 	--priority PRIORITY \
 	--notif-text NOTIF_TEXT \
-	--notif-delay NOTIF_DELAY \
+	--notif-duration NOTIF_DURATION \
 	--file FILE \
 	[--headless]
 ```
@@ -30,8 +30,8 @@ options:
   --priority PRIORITY   Priorité du paquet (valeur dans <select>)
   --notif-text NOTIF_TEXT
                         Texte de notification
-  --notif-delay NOTIF_DELAY
-                        Délai avant notification
+  --notif-duration NOTIF_DURATION
+                        Durée de la notification
   --file FILE           Chemin du fichier à uploader
   --headless            Exécuter sans interface graphique
 ```
@@ -47,7 +47,7 @@ ocs-pkgpush \
   --description "Ceci est un paquet de test" \
   --priority 5 \
   --notif-text "Mise à jour disponible X.Y.Z" \
-  --notif-delay 5 \
+  --notif-duration 5 \
   --file "/tmp/MonPaquetTest.zip" \
   --headless
 ```

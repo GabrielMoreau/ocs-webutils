@@ -35,7 +35,7 @@ from pathlib import Path
 from playwright.async_api import async_playwright
 from playwright._impl._errors import TimeoutError as PlaywrightTimeoutError, Error as PlaywrightError
 
-__version__ = "0.5.7"
+__version__ = "0.5.8"
 
 cache_dir = os.getenv("XDG_CACHE_HOME") or os.path.expanduser("~/.cache")
 SESSION_FILE = os.path.join(cache_dir, "ocs-utils", "session_state.json")
@@ -102,7 +102,7 @@ async def main():
     parser.add_argument("--description", required=True, help="Package description")
     parser.add_argument("--priority", required=True, help="Package priority (value from <select>)")
     parser.add_argument("--notif-text", required=True, help="Notification text")
-    parser.add_argument("--notif-delay", required=True, help="Delay before notification")
+    parser.add_argument("--notif-duration", required=True, help="Notification duration")
     parser.add_argument("--can-cancel", choices=["YES", "NO"], default="NO", help="User can cancel action (default is NO)")
     parser.add_argument("--can-report", choices=["YES", "NO"], default="YES", help="User can report action for the next time (default is YES)")
     parser.add_argument("--file", required=True, help="Path to the file to upload")
@@ -202,7 +202,7 @@ async def main():
         await page.set_input_files('input[name="additionalfiles"]', args.file)
         await page.select_option('select[name="NOTIFY_USER"]', 'YES')
         await page.fill('input[name="NOTIFY_TEXT"]', args.notif_text)
-        await page.fill('input[name="NOTIFY_COUNTDOWN"]', args.notif_delay)
+        await page.fill('input[name="NOTIFY_COUNTDOWN"]', args.notif_duration)
         await page.select_option('select[name="NOTIFY_CAN_DELAY"]', args.can_report)
         await page.select_option('select[name="NOTIFY_CAN_ABORT"]', args.can_cancel)
         await capture(page, "tmp_package_submission1.png")
