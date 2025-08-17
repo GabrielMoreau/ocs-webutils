@@ -35,7 +35,7 @@ from pathlib import Path
 from playwright.async_api import async_playwright
 from playwright._impl._errors import TimeoutError as PlaywrightTimeoutError, Error as PlaywrightError
 
-__version__ = "0.6.2"
+__version__ = "0.6.3"
 
 cache_dir = os.getenv("XDG_CACHE_HOME") or os.path.expanduser("~/.cache")
 SESSION_FILE = os.path.join(cache_dir, "ocs-utils", "session_state.json")
@@ -215,11 +215,13 @@ async def main():
         await page.locator('input[type="submit"]').scroll_into_view_if_needed()
         await capture(page, "tmp_package_submission2.png")
         try:
-            await page.click('input[type="submit"]')
+            # Wait for navigation triggered by submit
+            async with page.expect_navigation(timeout=args.timeout * 1000):
+                await page.click('input[type="submit"]')
+
             # Confirmation capture
-            await page.wait_for_load_state('networkidle', timeout=args.timeout * 1000) # 5 min
             await capture(page, "tmp_package_submit_result.png")
-            
+
             # Extra verification: check that package name appears in the page
             page_content = await page.content()
             if args.name in page_content:
@@ -229,12 +231,14 @@ async def main():
                 await page.screenshot(path="tmp_package_submit_check.png")
                 await browser.close()
                 sys.exit(1)
+
         except PlaywrightTimeoutError:
-            print("⏳ Timeout exceeded during file upload.")
-            print(f"❌ Package failed: {args.name}️")
+            print("⏳ Timeout exceeded during file upload or navigation.")
+            print(f"❌ Package failed: {args.name}")
             await capture(page, "tmp_package_submit_timeout.png")
             await browser.close()
             sys.exit(1)
+
         except PlaywrightError as e:
             print(f"❌ Playwright error during submission: {e}")
             await capture(page, "tmp_package_submit_error.png")
