@@ -35,7 +35,7 @@ from pathlib import Path
 from playwright.async_api import async_playwright
 from playwright._impl._errors import TimeoutError as PlaywrightTimeoutError, Error as PlaywrightError
 
-__version__ = "0.6.5"
+__version__ = "0.6.6"
 
 cache_dir = os.getenv("XDG_CACHE_HOME") or os.path.expanduser("~/.cache")
 SESSION_FILE = os.path.join(cache_dir, "ocs-utils", "session_state.json")
@@ -215,9 +215,9 @@ async def main():
         await page.locator('input[type="submit"]').scroll_into_view_if_needed()
         await capture(page, "tmp_package_submission2.png")
         try:
-            await page.click('input[type="submit"]', timeout=0)
+            await page.click('input[type="submit"]', timeout=args.timeout * 1000)
             # Check that the package is present
-            await page.wait_for_selector(f'text="{args.name}"', timeout=args.timeout*1000)
+            await page.wait_for_selector(f'text="{args.name}"', timeout=args.timeout * 1000)
             print(f"📦 Package successfully submitted: {args.name}")
             # Confirmation capture
             await capture(page, "tmp_package_submit_result.png")
