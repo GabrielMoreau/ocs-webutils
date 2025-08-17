@@ -35,7 +35,7 @@ from pathlib import Path
 from playwright.async_api import async_playwright
 from playwright._impl._errors import TimeoutError as PlaywrightTimeoutError, Error as PlaywrightError
 
-__version__ = "0.6.1"
+__version__ = "0.6.2"
 
 cache_dir = os.getenv("XDG_CACHE_HOME") or os.path.expanduser("~/.cache")
 SESSION_FILE = os.path.join(cache_dir, "ocs-utils", "session_state.json")
@@ -108,7 +108,7 @@ async def main():
     parser.add_argument("--can-cancel", choices=["YES", "NO"], default="NO", help="User can cancel action (default is NO)")
     parser.add_argument("--can-report", choices=["YES", "NO"], default="YES", help="User can report action for the next time (default is YES)")
     parser.add_argument("--headless", action="store_true", help="Run without GUI")
-    parser.add_argument("--timeout", type=int, default=300000, help="Timeout when uploading file package (defaut to 300000 / 5 min)")
+    parser.add_argument("--timeout", type=int, default=300, help="Timeout when uploading file package (defaut to 300 secondes / 5 min)")
     parser.add_argument("--capture-dir", help="Directory to save screenshots (optional)")
     args = parser.parse_args()
 
@@ -215,9 +215,9 @@ async def main():
         await page.locator('input[type="submit"]').scroll_into_view_if_needed()
         await capture(page, "tmp_package_submission2.png")
         try:
-            await page.click('input[type="submit"]', timeout=0)
+            await page.click('input[type="submit"]')
             # Confirmation capture
-            await page.wait_for_load_state('networkidle', timeout=args.timeout) # 5 min
+            await page.wait_for_load_state('networkidle', timeout=args.timeout * 1000) # 5 min
             await capture(page, "tmp_package_submit_result.png")
             
             # Extra verification: check that package name appears in the page
