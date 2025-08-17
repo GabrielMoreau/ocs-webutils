@@ -35,7 +35,7 @@ from pathlib import Path
 from playwright.async_api import async_playwright
 from playwright._impl._errors import TimeoutError as PlaywrightTimeoutError, Error as PlaywrightError
 
-__version__ = "0.5.8"
+__version__ = "0.5.9"
 
 cache_dir = os.getenv("XDG_CACHE_HOME") or os.path.expanduser("~/.cache")
 SESSION_FILE = os.path.join(cache_dir, "ocs-utils", "session_state.json")
@@ -94,18 +94,19 @@ async def session_is_valid(url):
         return valid
 
 async def main():
-    parser = argparse.ArgumentParser(description="Push a package to OCS Inventory")
+    parser = argparse.ArgumentParser(prog="ocs-pkgpush", description="Push a package to OCS Inventory")
     parser.add_argument("--url", required=True, help="OCS Inventory URL (e.g. https://server/ocsreports)")
     parser.add_argument("--username", help="OCS username (optional if session is valid)")
     parser.add_argument("--password", help="OCS password (optional if session is valid)")
     parser.add_argument("--name", required=True, help="Package name")
     parser.add_argument("--description", required=True, help="Package description")
-    parser.add_argument("--priority", required=True, help="Package priority (value from <select>)")
-    parser.add_argument("--notif-text", required=True, help="Notification text")
-    parser.add_argument("--notif-duration", required=True, help="Notification duration")
+    parser.add_argument("--priority", default="5", help="Package priority (default is 5)")
+    parser.add_argument("--file", required=True, help="Path to the file to upload")
+    parser.add_argument("--notify", choices=["YES", "NO"], default="YES", help="Notify user or not (default is YES)")
+    parser.add_argument("--notif-text", default="Install or update package", help="Notification text")
+    parser.add_argument("--notif-duration", default="5", help="Notification duration (default is 5 seconds)")
     parser.add_argument("--can-cancel", choices=["YES", "NO"], default="NO", help="User can cancel action (default is NO)")
     parser.add_argument("--can-report", choices=["YES", "NO"], default="YES", help="User can report action for the next time (default is YES)")
-    parser.add_argument("--file", required=True, help="Path to the file to upload")
     parser.add_argument("--headless", action="store_true", help="Run without GUI")
     parser.add_argument("--capture-dir", help="Directory to save screenshots (optional)")
     args = parser.parse_args()
@@ -200,11 +201,13 @@ async def main():
         await page.fill('input[name="pathfile"]', 'install.bat')
         # File upload
         await page.set_input_files('input[name="additionalfiles"]', args.file)
-        await page.select_option('select[name="NOTIFY_USER"]', 'YES')
-        await page.fill('input[name="NOTIFY_TEXT"]', args.notif_text)
-        await page.fill('input[name="NOTIFY_COUNTDOWN"]', args.notif_duration)
-        await page.select_option('select[name="NOTIFY_CAN_DELAY"]', args.can_report)
-        await page.select_option('select[name="NOTIFY_CAN_ABORT"]', args.can_cancel)
+        # Notification
+        await page.select_option('select[name="NOTIFY_USER"]', args.notify)
+        if args.notify == 'YES':
+            await page.fill('input[name="NOTIFY_TEXT"]', args.notif_text)
+            await page.fill('input[name="NOTIFY_COUNTDOWN"]', args.notif_duration)
+            await page.select_option('select[name="NOTIFY_CAN_DELAY"]', args.can_report)
+            await page.select_option('select[name="NOTIFY_CAN_ABORT"]', args.can_cancel)
         await capture(page, "tmp_package_submission1.png")
 
         # SUBMIT
