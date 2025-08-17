@@ -35,7 +35,7 @@ from pathlib import Path
 from playwright.async_api import async_playwright
 from playwright._impl._errors import TimeoutError as PlaywrightTimeoutError, Error as PlaywrightError
 
-__version__ = "0.6.4"
+__version__ = "0.6.5"
 
 cache_dir = os.getenv("XDG_CACHE_HOME") or os.path.expanduser("~/.cache")
 SESSION_FILE = os.path.join(cache_dir, "ocs-utils", "session_state.json")
@@ -215,25 +215,34 @@ async def main():
         await page.locator('input[type="submit"]').scroll_into_view_if_needed()
         await capture(page, "tmp_package_submission2.png")
         try:
-            await page.click('input[type="submit"]')
-            # Wait for the package name to appear (until timeout in seconds)
-            await page.wait_for_selector(f"text={args.name}", timeout=args.timeout * 1000)
-            #await page.wait_for_selector("table tr td:has-text('{}')".format(args.name), timeout=args.timeout * 1000)
-
+            await page.click('input[type="submit"]', timeout=0)
+            # Check that the package is present
+            await page.wait_for_selector(f'text="{args.name}"', timeout=args.timeout*1000)
+            print(f"📦 Package successfully submitted: {args.name}")
             # Confirmation capture
             await capture(page, "tmp_package_submit_result.png")
-            print(f"📦 Package successfully submitted: {args.name}")
+
+            #async with page.expect_navigation(timeout=args.timeout * 1000):
+            #   await page.locator('input[type="submit"]').click(timeout=args.timeout * 1000) 
+            ## After browsing, check that the package is present
+            #if await page.locator(f"text={args.name}").first.is_visible():
+            #    print(f"📦 Package successfully submitted: {args.name}")
+            #    # Confirmation capture
+            #    await capture(page, "tmp_package_submit_result.png")
+            #else:
+            #    print(f"❌ Package '{args.name}' not found in the server response!")
+            #    await browser.close()
+            #    sys.exit(1)
 
         except PlaywrightTimeoutError:
             print("⏳ Timeout exceeded during file upload (no package name found).")
             print(f"❌ Package failed: {args.name}")
-            await capture(page, "tmp_package_submit_timeout.png")
             await browser.close()
             sys.exit(1)
 
         except PlaywrightError as e:
-            print(f"❌ Playwright error during submission: {e}")
-            await capture(page, "tmp_package_submit_error.png")
+            print(f"⚠️ Playwright error during submission: {e}")
+            print(f"❌ Package failed: {args.name}")
             await browser.close()
             sys.exit(1)
 
