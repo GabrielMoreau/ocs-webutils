@@ -9,10 +9,12 @@ _ocs_pkgpush()
 
     # Liste des options reconnues
     opts="--url --username --password --name --description --priority \
-        --notif-text --notif-duration --file --headless --capture"
+        --file \
+        --notify -notif-text --notif-duration --can-cancel --can-abort \
+        --headless --capture-dir"
 
     case "${prev}" in
-        --file|--capture)
+        --file|--capture-dir)
             # Pour --file et --capture : compléter avec des fichiers / dossiers
             COMPREPLY=( $(compgen -f -- "$cur") )
             return 0
@@ -27,6 +29,10 @@ _ocs_pkgpush()
             COMPREPLY=( $(compgen -W "1 2 3 4 5 6 7 8" -- "$cur") )
             return 0
             ;;
+          
+        --notify|--can-cancel|--can-abort)
+            COMPREPLY=( $(compgen -W "YES NO" -- "$cur") )
+            return 0
         *)
             # Complétion des options
             COMPREPLY=( $(compgen -W "${opts}" -- "$cur") )
