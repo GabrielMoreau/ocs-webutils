@@ -33,6 +33,8 @@ _ocs_pkgpush()
         --notify|--can-cancel|--can-abort)
             COMPREPLY=( $(compgen -W "YES NO" -- "$cur") )
             return 0
+            ;;
+
         *)
             # Complétion des options
             COMPREPLY=( $(compgen -W "${opts}" -- "$cur") )
