@@ -35,7 +35,7 @@ from pathlib import Path
 from playwright.async_api import async_playwright
 from playwright._impl._errors import TimeoutError as PlaywrightTimeoutError, Error as PlaywrightError
 
-__version__ = "0.6.7"
+__version__ = "0.6.8"
 
 cache_dir = os.getenv("XDG_CACHE_HOME") or os.path.expanduser("~/.cache")
 SESSION_FILE = os.path.join(cache_dir, "ocs-utils", "session_state.json")
@@ -102,13 +102,13 @@ async def main():
     parser.add_argument("--description", required=True, help="Package description")
     parser.add_argument("--priority", type=int, default=5, help="Package priority (default is 5)")
     parser.add_argument("--file", required=True, help="Path to the file to upload")
+    parser.add_argument("--timeout", type=int, default=300, help="Timeout when uploading file package (defaut to 300 secondes / 5 min)")
     parser.add_argument("--notify", choices=["YES", "NO"], default="YES", help="Notify user or not (default is YES)")
     parser.add_argument("--notif-text", default="Install or update package", help="Notification text")
     parser.add_argument("--notif-duration", type=int, default=5, help="Notification duration (default is 5 seconds)")
     parser.add_argument("--can-cancel", choices=["YES", "NO"], default="NO", help="User can cancel action (default is NO)")
     parser.add_argument("--can-report", choices=["YES", "NO"], default="YES", help="User can report action for the next time (default is YES)")
     parser.add_argument("--headless", action="store_true", help="Run without GUI")
-    parser.add_argument("--timeout", type=int, default=300, help="Timeout when uploading file package (defaut to 300 secondes / 5 min)")
     parser.add_argument("--capture-dir", help="Directory to save screenshots (optional)")
     args = parser.parse_args()
 

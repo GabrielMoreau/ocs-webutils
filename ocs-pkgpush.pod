@@ -40,6 +40,20 @@ Package description. (Required)
 
 Package priority (value from the OCS Inventory <select> list). (Required)
 
+=item B<--file> I<PATH>
+
+Path to the file to upload. (Required)
+
+=item B<--timeout> I<SECONDS>
+
+Maximal time for uploading package before timeout from the client side.
+Default is 300 (5 min).
+
+=item B<--notify> I<{YES,NO}>
+
+Notify user or not.
+Default is YES.
+
 =item B<--notif-text> I<TEXT>
 
 Notification text shown to the end user. (Required)
@@ -48,9 +62,15 @@ Notification text shown to the end user. (Required)
 
 Notification duration. (Required)
 
-=item B<--file> I<PATH>
+=item B<--can-cancel> I<{YES,NO}>
 
-Path to the file to upload. (Required)
+The user can cancel the package deployment.
+Default is NO.
+
+=item B<--can-report> I<{YES,NO}>
+
+The user can request that the package deployment be postponed until the next agent launch (approximately one hour later).
+Default is YES.
 
 =item B<--headless>
 
