@@ -1,3 +1,6 @@
 tmp_*
 test
 *.deb
+public
+*.html
+*.tmp

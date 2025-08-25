@@ -7,25 +7,25 @@ _ocs_pkgpush()
     cur="${COMP_WORDS[COMP_CWORD]}"
     prev="${COMP_WORDS[COMP_CWORD-1]}"
 
-    # Liste des options reconnues
+    # List of recognized options
     opts="--url --username --password --name --description --priority \
-        --file \
+        --file --timeout \
         --notify -notif-text --notif-duration --can-cancel --can-abort \
-        --headless --timeout --capture-dir"
+        --headless --capture-dir"
 
     case "${prev}" in
         --file|--capture-dir)
-            # Pour --file et --capture : compléter avec des fichiers / dossiers
+            # For --file and --capture-dir: complete with files/folders
             COMPREPLY=( $(compgen -f -- "$cur") )
             return 0
             ;;
         --url)
-            # Exemple : on propose juste https:// par défaut
+            # Example: we just offer https:// by default
             COMPREPLY=( $(compgen -W "https://" -- "$cur") )
             return 0
             ;;
         --priority)
-            # Valeurs possibles à adapter selon l'OCS
+            # Possible values to be adapted according to the OCS server
             COMPREPLY=( $(compgen -W "1 2 3 4 5 6 7 8" -- "$cur") )
             return 0
             ;;
@@ -36,7 +36,7 @@ _ocs_pkgpush()
             ;;
 
         *)
-            # Complétion des options
+            # Completion of options
             COMPREPLY=( $(compgen -W "${opts}" -- "$cur") )
             return 0
             ;;

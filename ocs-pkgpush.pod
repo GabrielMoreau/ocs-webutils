@@ -56,27 +56,31 @@ Default is YES.
 
 =item B<--notif-text> I<TEXT>
 
-Notification text shown to the end user. (Required)
+Notification text shown to the end user.
+This option does not make sense if the C<--notify> option is not enabled.
 
 =item B<--notif-duration> I<SECONDS>
 
-Notification duration. (Required)
+Notification duration.
+This option does not make sense if the C<--notify> option is not enabled.
 
 =item B<--can-cancel> I<{YES,NO}>
 
 The user can cancel the package deployment.
 Default is NO.
+This option does not make sense if the C<--notify> option is not enabled.
 
 =item B<--can-report> I<{YES,NO}>
 
 The user can request that the package deployment be postponed until the next agent launch (approximately one hour later).
 Default is YES.
+This option does not make sense if the C<--notify> option is not enabled.
 
 =item B<--headless>
 
 Run without showing the browser GUI.
 
-=item B<--capture> I<DIR>
+=item B<--capture-dir> I<DIR>
 
 If specified, enables screenshots and saves them in the given directory.
 
@@ -103,8 +107,14 @@ Push a package with a given priority and notification:
   ocs-pkgpush --url https://ocs.example.com/ocsreports \
     --username admin --password secret \
     --name MyPackage --description "Installs stuff" \
-    --priority 1 --notif-text "Update incoming" \
-    --notif-duration 60 --file ./install.zip
+    --priority 1  \
+    --file ./install.zip --timeout 300 \
+    --notify YES \
+      --notif-text "Update incoming" \
+      --notif-duration 60 \
+      --can-cancel NO \
+      --can-report YES \
+    --headless --capture-dir tmp/
 
 
 =head1 SEE ALSO

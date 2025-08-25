@@ -28,7 +28,7 @@ pod2man ocs-pkgpush.pod | gzip > "${tmp_folder}/usr/share/man/man1/ocs-pkgpush.1
 # Copy files
 cp ocs-pkgpush                  "${tmp_folder}/usr/bin/"
 #cp ocs-pkgpush.1.gz             "${tmp_folder}/usr/share/man/man1/"
-cp LICENSE.txt                  "${tmp_folder}/usr/share/ocs-utils/"
+cp LICENSE.md                   "${tmp_folder}/usr/share/ocs-utils/"
 cp ocs-pkgpush.bash_completion  "${tmp_folder}/etc/bash_completion.d/"
 chmod -R a+rx        "${tmp_folder}/usr/bin/ocs-pkgpush"
 chmod -R a+rX,go-w   "${tmp_folder}/usr"
