@@ -19,7 +19,7 @@ pages:
     - mkdir -p public/download
     - $(wget --no-check-certificate ${CI_PAGES_URL}/download.tar.gz -O download.tar.gz || exit 0)
     - '[ -s download.tar.gz ] && { tar -xzf download.tar.gz public/download/ || echo "tar error" ; }'
-    - (cd public/download; ls -t ocs-webutils_*.deb 2> /dev/null | tail -n +$((${KEEP_PKG} + 1)) | xargs -r rm -f)
+    - (cd public/download; ls -t ocs-webutils_*.deb 2> /dev/null | tail -n +$((${KEEP_PKG} + 1)) | xargs -r rm -f || exit 0)
     - make pkg
     - make pages
     - (cd public/download; ../../only-keep-1pkg-day 'ocs-webutils_*.deb' | tee >(cat 1>&2) | bash)
