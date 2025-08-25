@@ -4,10 +4,11 @@ ocs-pkgpush - Push a package to OCS Inventory
 
 =head1 SYNOPSIS
 
- ocs-pkgpush[--help|-h] --url URL [--username USERNAME] [--password PASSWORD] \
-   --name NAME --description DESCRIPTION --priority PRIORITY --file FILE [--timeout TIMEOUT] \
-   [--notify YES] [--notif-text NOTIF_TEXT] [--notif-duration NOTIF_DURATION] [--can-cancel NO] [--can-report YES] \
-   [--headless] [--capture-dir CAPTURE_DIR]
+ ocs-pkgpush [--help|-h]
+    --url URL [--username USERNAME] [--password PASSWORD] \
+    --name NAME --description DESCRIPTION --priority PRIORITY --file FILE [--timeout TIMEOUT] \
+    [--notify YES] [--notif-text NOTIF_TEXT] [--notif-duration NOTIF_DURATION] [--can-cancel NO] [--can-report YES] \
+    [--headless] [--capture-dir CAPTURE_DIR]
 
 =head1 DESCRIPTION
 
