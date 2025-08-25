@@ -1,39 +1,55 @@
 # OCS-WebUtils - Utilities for managing packages on an OCS Inventory server
 
+* Manual: https://legi.gricad-pages.univ-grenoble-alpes.fr/soft/trokata/ocs-webutils (
+* Download: https://legi.gricad-pages.univ-grenoble-alpes.fr/soft/trokata/ocs-webutils/download (Debian package)
+
 ## `ocs-pkgpush`: uploads a package to an OCS server
 
 ```
-usage: - [-h] \
+usage: ocs-pkgpush [--help|-h] \
 	--url URL \
 	[--username USERNAME] \
 	[--password PASSWORD] \
 	--name NAME \
 	--description DESCRIPTION \
 	--priority PRIORITY \
+	--file FILE \
+	--timeout TIMEOUT \
+	--notify {YES,NO}
 	--notif-text NOTIF_TEXT \
 	--notif-duration NOTIF_DURATION \
-	--file FILE \
-	[--headless]
+	--can-cancel {YES,NO} \
+	--can-report {YES,NO} \
+	[--headless] \
+	[--capture-dir CAPTURE_DIR]
 ```
 
-Push d'un paquet dans OCS Inventory
+Options to push (upload) a package to an OCS inventory server.
 
 ```
 options:
   -h, --help            show this help message and exit
-  --url URL             URL d'OCS Inventory (ex: https://serveur/ocsreports)
-  --username USERNAME   Nom d'utilisateur OCS (optionnel si session valide)
-  --password PASSWORD   Mot de passe OCS (optionnel si session valide)
-  --name NAME           Nom du paquet
+  --url URL             OCS Inventory URL server (ie: https://serveur/ocsreports)
+  --username USERNAME   OCS username (optional if session is valid)
+  --password PASSWORD   OCS password (optional if session is valid)
+  --name NAME           Package name
   --description DESCRIPTION
-                        Description du paquet
-  --priority PRIORITY   Priorité du paquet (valeur dans <select>)
+                        Package description
+  --priority PRIORITY   Package priority (between 1 and 8)
+  --file FILE           Path of the file to upload
+  --timeout TIMEOUT     Maximal time for uploading package
+  --notify {YES,NO}     Notify the users
   --notif-text NOTIF_TEXT
-                        Texte de notification
+                        Notification text
   --notif-duration NOTIF_DURATION
-                        Durée de la notification
-  --file FILE           Chemin du fichier à uploader
-  --headless            Exécuter sans interface graphique
+                        Notification duration
+   --can-cancel {YES,NO}
+                        Users can cancel the deployment (only if they are notified)
+   --can-report {YES,NO}
+                        Users can report the deployment (only if they are notified)
+  --headless            Run without graphical user interface
+  --capture-dir CAPTURE_DIR
+                        Folder for saving browser captures during upload
 ```
 
 Example
@@ -43,11 +59,13 @@ ocs-pkgpush \
   --url "https://ocs-server.example.com/ocsreports" \
   --username "XXXX" \
   --password "YYYY" \
-  --name "MonPaquetTest" \
-  --description "Ceci est un paquet de test" \
+  --name "PackageTest_X.Y.Z_x64" \
+  --description "This is a test package (X.Y.Z)" \
   --priority 5 \
-  --notif-text "Mise à jour disponible X.Y.Z" \
-  --notif-duration 5 \
-  --file "/tmp/MonPaquetTest.zip" \
-  --headless
+  --file "/tmp/PackageTest_X.Y.Z_x64.zip" \
+  --notify YES \
+   --notif-text "Update available for PackageTest X.Y.Z" \
+   --notif-duration 10 \
+  --headless \
+  --capture-dir tmp
 ```
