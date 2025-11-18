@@ -13,7 +13,10 @@ if [ ! -e "$CACHE_DIR/ocs-utils/venv/bin/activate" ] || [ ! -e "$CACHE_DIR/ocs-u
 then
     (
         mkdir -p "$CACHE_DIR/ocs-utils"
-        echo 'playwright' > "$CACHE_DIR/ocs-utils/requirements.txt"
+        cat <<'END_REQUIRE' > "$CACHE_DIR/ocs-utils/requirements.txt"
+playwright
+secretstorage
+END_REQUIRE
         python3 -m venv "$CACHE_DIR/ocs-utils/venv"
         source "$CACHE_DIR/ocs-utils/venv/bin/activate"
         pip install --upgrade -r "$CACHE_DIR/ocs-utils/requirements.txt"
@@ -31,11 +34,12 @@ import sys
 import argparse
 import getpass
 import asyncio
+import secretstorage
 from pathlib import Path
 from playwright.async_api import async_playwright
 from playwright._impl._errors import TimeoutError as PlaywrightTimeoutError, Error as PlaywrightError
 
-__version__ = "0.7.2"
+__version__ = "0.8.1"
 
 cache_dir = os.getenv("XDG_CACHE_HOME") or os.path.expanduser("~/.cache")
 SESSION_FILE = os.path.join(cache_dir, "ocs-utils", "session_state.json")
@@ -50,6 +54,52 @@ def prompt_from_tty(prompt, hide=False):
             tty_out.write(prompt)
             tty_out.flush()
             return tty_in.readline().strip()
+
+def try_get_credentials_from_secretstorage(url: str):
+    """
+    Attempt to retrieve username/password over SercretStorage (Gnome Keyring or KeePassXC).
+    Returns (None, None) if unsuccessful.
+    """
+
+    bus = secretstorage.dbus_init()
+    for collection in secretstorage.get_all_collections(bus):
+        if collection.is_locked():
+            try:
+                collection.unlock()
+            except Exception:
+                continue  # on ignore les collections non accessibles
+        #print("NAME: ", collection.get_label())
+
+        items = list(collection.search_items({"URL": url}))
+        if not items:
+            continue
+
+        for item in items:
+            attrs = item.get_attributes()
+            #print("ATTR: ", attrs)
+            username = attrs.get("UserName") or item.get_label()
+
+            # Try get_secret()
+            password = None
+            try:
+                raw_secret = item.get_secret()
+                if raw_secret:
+                    password = raw_secret.decode()
+            except Exception:
+                pass  # KeePassXC error here
+
+            # Fallback : attribut ocs-pkgpush
+            if not password:
+                password = attrs.get("ocs-utils-code")
+
+            # Next item
+            if not password:
+                continue
+
+            return username, password
+
+    # rien trouvé dans aucune collection
+    return None, None
 
 async def safe_goto(page, url, timeout=30000):
     """
@@ -143,10 +193,16 @@ async def main():
             page = await context.new_page()
         else:
             print("🔐 Invalid or missing session → login required")
-            if not args.username:
-                args.username = prompt_from_tty("OCS username: ")
-            if not args.password:
-                args.password = prompt_from_tty("OCS password: ", hide=True)
+            user_ss, pwd_ss = try_get_credentials_from_secretstorage(args.url)
+            if user_ss and pwd_ss:
+                print("✅ Credentials retrieved via SecretStorage (Gnome Keyring or KeePassXC)")
+                args.username = user_ss
+                args.password = pwd_ss
+            else:
+                if not args.username:
+                    args.username = prompt_from_tty("OCS username: ")
+                if not args.password:
+                    args.password = prompt_from_tty("OCS password: ", hide=True)
 
             context = await browser.new_context(ignore_https_errors=True)
             page = await context.new_page()
