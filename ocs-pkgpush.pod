@@ -120,10 +120,34 @@ Push a package with a given priority and notification:
       --can-report YES \
     --headless --capture-dir tmp/
 
+=head1 SecretStorage
+
+=head2 KeePassXC
+
+It is possible to use KeePassXC as the backend for the SercretStorage service instead of Gnome-Keyring.
+Gnome-Keyring must be partially disabled.
+This is done at the user level through the following two files.
+
+F<$HOME/.config/autostart/gnome-keyring-secrets.desktop>
+
+ [Desktop Entry]
+ Type=Application
+ Name=GNOME Keyring Secrets
+ Exec=/usr/bin/gnome-keyring-daemon --start --components=secrets
+ Hidden=true
+
+F<$HOME/.config/autostart/gnome-keyring-ssh.desktop>
+
+ [Desktop Entry]
+ Type=Application
+ Name=GNOME Keyring SSH
+ Exec=/usr/bin/gnome-keyring-daemon --start --components=ssh
+ Hidden=true
+
 
 =head1 SEE ALSO
 
-L<python3(1)>, L<playwright>
+L<python3(1)>, L<playwright>, L<KeePassXC>
 
 
 =head1 AUTHORS
