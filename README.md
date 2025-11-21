@@ -1,6 +1,6 @@
 # OCS-WebUtils - Utilities for managing packages on an OCS Inventory server
 
-* Manual: https://legi.gricad-pages.univ-grenoble-alpes.fr/soft/trokata/ocs-webutils (
+* Manual: https://legi.gricad-pages.univ-grenoble-alpes.fr/soft/trokata/ocs-webutils
 * Download: https://legi.gricad-pages.univ-grenoble-alpes.fr/soft/trokata/ocs-webutils/download (Debian package)
 
 ## `ocs-pkgpush`: uploads a package to an OCS server
