@@ -122,6 +122,10 @@ Push a package with a given priority and notification:
 
 =head1 SecretStorage
 
+With Secret Storage, it is possible to avoid entering your password each time you use it,
+even when the session cookie has expired.
+However, security then depends on your keyring.
+
 =head2 KeePassXC
 
 It is possible to use KeePassXC as the backend for the SercretStorage service instead of Gnome-Keyring.
@@ -144,6 +148,14 @@ F<$HOME/.config/autostart/gnome-keyring-ssh.desktop>
  Exec=/usr/bin/gnome-keyring-daemon --start --components=ssh
  Hidden=true
 
+In the general settings of the KeePassXC application,
+you must also enable KeePassXC integration with Freedesktop.org's “Secret Service.”
+At the same time, enable SSH agent integration (if you also want to use KeePassXC for SSH).
+
+Since KeePassXC does not allow password access via Secret Service,
+if you want to pass the password automatically,
+you must enter it in an advanced field: C<ocs-utils-code>.
+As for the URL and LOGIN, there is no need to worry, as they are retrieved via this protocol.
 
 =head1 SEE ALSO
 
