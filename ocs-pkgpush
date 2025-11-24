@@ -7,8 +7,27 @@
 #
 # 2025/08/07 Gabriel Moreau <Gabriel.Moreau@univ-grenoble-alpes.fr>
 
-# 📦 Preparing the virtual environment
 CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}"
+
+new_args=()
+# Loop on args
+for arg in "$@"; do
+    case "$arg" in
+        --clean-cache)
+            [ -d "$CACHE_DIR/ocs-utils" ] && rm -rf "$CACHE_DIR/ocs-utils"
+            echo "✅ Cache folder clean"
+            exit
+            ;;
+        *)
+            # Keep other option
+            new_args+=("$arg")
+            ;;
+    esac
+done
+# Replace "$@" with all other CLI option
+set -- "${new_args[@]}"
+
+# 📦 Preparing the virtual environment
 if [ ! -e "$CACHE_DIR/ocs-utils/venv/bin/activate" ] || [ ! -e "$CACHE_DIR/ocs-utils/venv/bin/playwright" ]
 then
     (
@@ -39,7 +58,7 @@ from pathlib import Path
 from playwright.async_api import async_playwright
 from playwright._impl._errors import TimeoutError as PlaywrightTimeoutError, Error as PlaywrightError
 
-__version__ = "0.8.4"
+__version__ = "0.8.5"
 
 cache_dir = os.getenv("XDG_CACHE_HOME") or os.path.expanduser("~/.cache")
 SESSION_FILE = os.path.join(cache_dir, "ocs-utils", "session_state.json")
