@@ -8,7 +8,8 @@ ocs-pkgpush - Push a package to OCS Inventory
     --url URL [--username USERNAME] [--password PASSWORD] \
     --name NAME --description DESCRIPTION --priority PRIORITY --file FILE [--timeout TIMEOUT] \
     [--notify YES] [--notif-text NOTIF_TEXT] [--notif-duration NOTIF_DURATION] [--can-cancel NO] [--can-report YES] \
-    [--headless] [--capture-dir CAPTURE_DIR]
+    [--headless] [--capture-dir CAPTURE_DIR] \
+    [--clean-cache]
 
 =head1 DESCRIPTION
 
@@ -87,6 +88,10 @@ Run without showing the browser GUI.
 =item B<--capture-dir> I<DIR>
 
 If specified, enables screenshots and saves them in the given directory.
+
+=item B<--clean-cache>
+
+Clean Python cache (for example playwright code).
 
 =back
 

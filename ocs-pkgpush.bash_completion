@@ -11,7 +11,8 @@ _ocs_pkgpush()
     opts="--url --username --password --name --description --priority \
         --file --timeout \
         --notify -notif-text --notif-duration --can-cancel --can-abort \
-        --headless --capture-dir"
+        --headless --capture-dir \
+        --clean-cache"
 
     case "${prev}" in
         --file|--capture-dir)
