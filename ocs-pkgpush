@@ -3,7 +3,7 @@
 # ocs-pkgpush
 #
 # License GNU GPL version 2
-# Copyright (C) 2025, LEGI UMR 5519 / CNRS UGA G-INP, Grenoble, France
+# Copyright (C) 2025-2026, LEGI UMR 5519 / CNRS UGA G-INP, Grenoble, France
 #
 # 2025/08/07 Gabriel Moreau <Gabriel.Moreau@univ-grenoble-alpes.fr>
 
@@ -58,7 +58,7 @@ from pathlib import Path
 from playwright.async_api import async_playwright
 from playwright._impl._errors import TimeoutError as PlaywrightTimeoutError, Error as PlaywrightError
 
-__version__ = "0.8.6"
+__version__ = "0.8.7"
 
 cache_dir = os.getenv("XDG_CACHE_HOME") or os.path.expanduser("~/.cache")
 SESSION_FILE = os.path.join(cache_dir, "ocs-utils", "session_state.json")
