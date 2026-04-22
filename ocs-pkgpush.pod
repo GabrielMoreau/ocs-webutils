@@ -154,7 +154,7 @@ F<$HOME/.config/autostart/gnome-keyring-ssh.desktop>
  Hidden=true
 
 In the general settings of the KeePassXC application,
-you must also enable KeePassXC integration with Freedesktop.org's “Secret Service.”
+you must also enable KeePassXC integration with Freedesktop.org's C<Secret Service>.
 At the same time, enable SSH agent integration (if you also want to use KeePassXC for SSH).
 
 Since KeePassXC does not allow password access via Secret Service,
@@ -166,6 +166,7 @@ As for the URL and LOGIN, there is no need to worry, as they are retrieved via t
 
 L<python3(1)>, L<playwright>, L<KeePassXC>
 
+Source code: L<https://gricad-gitlab.univ-grenoble-alpes.fr/legi/soft/trokata/ocs-webutils/>
 
 =head1 AUTHORS
 
@@ -176,4 +177,4 @@ Written by Gabriel Moreau <Gabriel.Moreau(A)univ-grenoble-alpes.fr> - Grenoble -
 
 License GNU GPL version 2
 
- Copyright (C) 2025, LEGI UMR 5519 / CNRS UGA G-INP, Grenoble, France
+ Copyright (C) 2025-2026, LEGI UMR 5519 / CNRS UGA G-INP, Grenoble, France
