@@ -168,6 +168,12 @@ L<python3(1)>, L<playwright>, L<KeePassXC>
 
 Source code: L<https://gricad-gitlab.univ-grenoble-alpes.fr/legi/soft/trokata/ocs-webutils/>
 
+
+=head1 VERSION
+
+OCS-Webutils version @VERSION@
+
+
 =head1 AUTHORS
 
 Written by Gabriel Moreau <Gabriel.Moreau(A)univ-grenoble-alpes.fr> - Grenoble - France
