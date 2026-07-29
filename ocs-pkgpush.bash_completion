@@ -1,5 +1,6 @@
 # bash completion for ocs-pkgpush
 
+have ocs-pkgpush &&
 _ocs_pkgpush()
 {
     local cur prev opts
@@ -42,6 +43,4 @@ _ocs_pkgpush()
             return 0
             ;;
     esac
-}
-
-complete -F _ocs_pkgpush ocs-pkgpush
+} && complete -F _ocs_pkgpush ocs-pkgpush
