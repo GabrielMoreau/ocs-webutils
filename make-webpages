@@ -40,7 +40,7 @@ cp -p --no-clobber "${PKG_NAME}"_*.deb public/download/
 
 (
   cd public
-  ln -sf "${PKG_NAME}".html index.html
+  ln -sf ocs-pkgpush.html index.html
 )
 
 PKG_VERSION=$(grep '^PKG_VERSION=' make-package-debian | cut -f 2 -d '=')
