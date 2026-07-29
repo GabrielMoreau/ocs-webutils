@@ -44,12 +44,12 @@ cp -p --no-clobber "${PKG_NAME}"_*.deb public/download/
 )
 
 PKG_VERSION=$(grep '^PKG_VERSION=' make-package-debian | cut -f 2 -d '=')
-echo '<html><body><h1>OCS-Webutils Debian Package (Latest version: '"${CODE_VERSION}-${PKG_VERSION}"')</h1><ul>' > public/download/index.html
 (
+  printf '<html><body><h1>%s Debian Package (Latest version: %s-%s)</h1><ul>' 'OCS-Webutils' "${CODE_VERSION}" "${PKG_VERSION}"
   cd public/download
   while read -r file
   do
     printf '<li><a href="%s">%s</a> (%s)</li>\n' "${file}" "${file}" "$(stat -c %y "${file}" | cut -f 1 -d ' ')"
-  done < <(ls -1t -- *.deb) >> index.html
-)
-echo '</ul></body></html>' >> public/download/index.html
+  done < <(ls -1t -- *.deb)
+  echo '</ul></body></html>'
+) > public/download/index.html
