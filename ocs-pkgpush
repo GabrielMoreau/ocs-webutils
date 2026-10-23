@@ -56,7 +56,8 @@ import asyncio
 import secretstorage
 from pathlib import Path
 from playwright.async_api import async_playwright
-from playwright._impl._errors import TimeoutError as PlaywrightTimeoutError, Error as PlaywrightError
+from playwright.async_api import async_playwright, TimeoutError as PlaywrightTimeoutError
+from playwright._impl._errors import Error as PlaywrightError
 
 __version__ = "@VERSION@"
 
@@ -122,16 +123,18 @@ def try_get_credentials_from_secretstorage(url: str):
 
 async def safe_goto(page, url, timeout=30000):
     """
-    Attempt to navigate to the URL and return:
-    - True if OK
-    - False if network error or timeout
+    Navigate without waiting for every resource to finish loading.
     """
     try:
-        await page.goto(url, timeout=timeout)
+        await page.goto(
+            url,
+            timeout=timeout,
+            wait_until="domcontentloaded",
+        )
         return True
     except PlaywrightTimeoutError:
         print(f"❌ Unable to access {url} (timeout exceeded).")
-        print("💡 Check your network connection or VPN.")
+        print("💡 Check network, VPN or OCS response.")
         return False
     except PlaywrightError as e:
         print(f"❌ Error accessing {url}: {e}")
@@ -230,8 +233,37 @@ async def main():
                 sys.exit(1)
             await page.fill('input[name="LOGIN"]', args.username)
             await page.fill('input[name="PASSWD"]', args.password)
-            await page.click('input[name="Valid_CNX"]')
-            await page.wait_for_load_state('networkidle')
+            page.on("requestfailed", lambda req:
+                print("REQUEST FAILED:", req.url, req.failure)
+                )
+
+            page.on("response", lambda response:
+                print("HTTP:", response.status, response.url)
+                if response.status >= 400 else None
+            )
+            # Déclenche le clic sans attendre la fin de la navigation
+            await page.locator('input[name="Valid_CNX"]').evaluate(
+                "(el) => el.click()"
+            )
+
+            # Attend brièvement que la page réagisse
+            try:
+                await page.wait_for_load_state(
+                    "domcontentloaded",
+                    timeout=15000
+                )
+            except PlaywrightTimeoutError:
+                print("⚠️ La page n'a pas terminé son chargement.")
+
+            # Affiche l'état obtenu
+            await page.wait_for_timeout(2000)
+            print("URL après connexion :", page.url)
+            print("Titre de la page :", await page.title())
+
+            print("Formulaire de connexion encore présent :",
+                  await page.locator('input[name="LOGIN"]').count() > 0)
+            #await page.click('input[name="Valid_CNX"]')
+            #await page.wait_for_load_state('networkidle')
 
             if await page.locator('input[name="LOGIN"]').is_visible():
                 print("❌ Login failed")
@@ -244,8 +276,16 @@ async def main():
             print("✅ Session saved")
 
         # GO TO tele_build page
-        await page.goto(f"{args.url}/?function=tele_build")
-        await page.wait_for_load_state('networkidle')
+        #await page.goto(f"{args.url}/?function=tele_build")
+        #await page.wait_for_load_state('networkidle')
+        if not await safe_goto(
+            page,
+            f"{args.url}/?function=tele_build",
+            timeout=60000,
+        ):
+            await browser.close()
+            sys.exit(1)
+        print("✅ Page tele_build chargée :", page.url)
 
         # CLICK ON WINDOWS
         await page.click('text=Windows')
