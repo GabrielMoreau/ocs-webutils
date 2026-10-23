@@ -182,6 +182,7 @@ async def main():
     parser.add_argument("--can-report", choices=["YES", "NO"], default="YES", help="User can report action for the next time (default is YES)")
     parser.add_argument("--headless", action="store_true", help="Run without GUI")
     parser.add_argument("--capture-dir", help="Directory to save screenshots (optional)")
+    parser.add_argument("--clean-cache", action="store_true", help="Clean cache and remove cached Playwright environment")
     args = parser.parse_args()
 
     # Check if the file to upload exists
