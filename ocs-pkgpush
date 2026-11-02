@@ -223,9 +223,9 @@ async def main():
                 args.password = pwd_ss
             else:
                 if not args.username:
-                    args.username = prompt_from_tty("OCS username: ")
+                    args.username = prompt_from_tty("👤 OCS username: ")
                 if not args.password:
-                    args.password = prompt_from_tty("OCS password: ", hide=True)
+                    args.password = prompt_from_tty("🔑 OCS password: ", hide=True)
 
             context = await browser.new_context(ignore_https_errors=True)
             page = await context.new_page()
