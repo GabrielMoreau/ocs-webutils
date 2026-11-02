@@ -235,11 +235,11 @@ async def main():
             await page.fill('input[name="LOGIN"]', args.username)
             await page.fill('input[name="PASSWD"]', args.password)
             page.on("requestfailed", lambda req:
-                print("REQUEST FAILED:", req.url, req.failure)
+                print("❌ REQUEST FAILED:", req.url, req.failure)
                 )
 
             page.on("response", lambda response:
-                print("HTTP:", response.status, response.url)
+                print("❌ HTTP:", response.status, response.url)
                 if response.status >= 400 else None
             )
             # Déclenche le clic sans attendre la fin de la navigation
@@ -256,12 +256,12 @@ async def main():
             except PlaywrightTimeoutError:
                 print("⚠️ La page n'a pas terminé son chargement.")
 
-            # Affiche l'état obtenu
+            # Displays the resulting status
             await page.wait_for_timeout(2000)
-            print("URL après connexion :", page.url)
-            print("Titre de la page :", await page.title())
+            print("ℹ️ URL after logging in:", page.url)
+            print("ℹ️ Page title:", await page.title())
 
-            print("Formulaire de connexion encore présent :",
+            print("ℹ️ Login form still present:",
                   await page.locator('input[name="LOGIN"]').count() > 0)
             #await page.click('input[name="Valid_CNX"]')
             #await page.wait_for_load_state('networkidle')
@@ -286,7 +286,7 @@ async def main():
         ):
             await browser.close()
             sys.exit(1)
-        print("✅ Page tele_build chargée :", page.url)
+        print("✅ Page tele_build loaded:", page.url)
 
         # CLICK ON WINDOWS
         await page.click('text=Windows')
