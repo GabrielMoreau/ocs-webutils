@@ -258,10 +258,10 @@ async def main():
 
             # Displays the resulting status
             await page.wait_for_timeout(2000)
-            print("ℹ️ URL after logging in:", page.url)
-            print("ℹ️ Page title:", await page.title())
+            print("ℹ️  URL after logging in:", page.url)
+            print("ℹ️  Page title:", await page.title())
 
-            print("ℹ️ Login form still present:",
+            print("ℹ️  Login form still present:",
                   await page.locator('input[name="LOGIN"]').count() > 0)
             #await page.click('input[name="Valid_CNX"]')
             #await page.wait_for_load_state('networkidle')
