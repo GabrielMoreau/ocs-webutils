@@ -133,12 +133,12 @@ async def safe_goto(page, url, timeout=30000):
         )
         return True
     except PlaywrightTimeoutError:
-        print(f"❌ Unable to access {url} (timeout exceeded).")
-        print("💡 Check network, VPN or OCS response.")
+        print(f"❌\u00A0Unable to access {url} (timeout exceeded).")
+        print("💡\u00A0Check network, VPN or OCS response.")
         return False
     except PlaywrightError as e:
-        print(f"❌ Error accessing {url}: {e}")
-        print("💡 Check if the server is reachable and if VPN is active.")
+        print(f"❌\u00A0Error accessing {url}: {e}")
+        print("💡\u00A0Check if the server is reachable and if VPN is active.")
         return False
 
 async def session_is_valid(url):
@@ -187,7 +187,7 @@ async def main():
 
     # Check if the file to upload exists
     if not os.path.isfile(args.file):
-        print(f"❌ Error: file '{args.file}' not found.")
+        print(f"❌\u00A0Error: file '{args.file}' not found.")
         sys.exit(1)
 
     # Prepare capture directory if requested
@@ -200,7 +200,7 @@ async def main():
         if capture_dir:
             path = capture_dir / filename
             await page.screenshot(path=str(path))
-            print(f"📸 Screenshot saved: {path}")
+            print(f"📸\u00A0Screenshot saved: {path}")
 
     valid_state = await session_is_valid(args.url)
 
@@ -211,21 +211,21 @@ async def main():
             await browser.close()
             sys.exit(1)
         elif valid_state is True:
-            print("♻️  Existing valid session → reusing")
+            print("♻️\u00A0Existing valid session → reusing")
             context = await browser.new_context(storage_state=SESSION_FILE, ignore_https_errors=True)
             page = await context.new_page()
         else:
-            print("🔐 Invalid or missing session → login required")
+            print("🔐\u00A0Invalid or missing session → login required")
             user_ss, pwd_ss = try_get_credentials_from_secretstorage(args.url)
             if user_ss and pwd_ss:
-                print("✅ Credentials retrieved via SecretStorage (Gnome Keyring or KeePassXC)")
+                print("✅\u00A0Credentials retrieved via SecretStorage (Gnome Keyring or KeePassXC)")
                 args.username = user_ss
                 args.password = pwd_ss
             else:
                 if not args.username:
-                    args.username = prompt_from_tty("👤 OCS username: ")
+                    args.username = prompt_from_tty("👤\u00A0OCS username: ")
                 if not args.password:
-                    args.password = prompt_from_tty("🔑 OCS password: ", hide=True)
+                    args.password = prompt_from_tty("🔑\u00A0OCS password: ", hide=True)
 
             context = await browser.new_context(ignore_https_errors=True)
             page = await context.new_page()
@@ -235,11 +235,11 @@ async def main():
             await page.fill('input[name="LOGIN"]', args.username)
             await page.fill('input[name="PASSWD"]', args.password)
             page.on("requestfailed", lambda req:
-                print("❌ REQUEST FAILED:", req.url, req.failure)
+                print("❌\u00A0REQUEST FAILED:", req.url, req.failure)
                 )
 
             page.on("response", lambda response:
-                print("❌ HTTP:", response.status, response.url)
+                print("❌\u00A0HTTP:", response.status, response.url)
                 if response.status >= 400 else None
             )
             # Déclenche le clic sans attendre la fin de la navigation
@@ -254,27 +254,27 @@ async def main():
                     timeout=15000
                 )
             except PlaywrightTimeoutError:
-                print("⚠️ La page n'a pas terminé son chargement.")
+                print("⚠️\u00A0La page n'a pas terminé son chargement.")
 
             # Displays the resulting status
             await page.wait_for_timeout(2000)
-            print("ℹ️  URL after logging in:", page.url)
-            print("ℹ️  Page title:", await page.title())
+            print("ℹ️\u00A0URL after logging in:", page.url)
+            print("ℹ️\u00A0Page title:", await page.title())
 
-            print("ℹ️  Login form still present:",
+            print("ℹ️\u00A0Login form still present:",
                   await page.locator('input[name="LOGIN"]').count() > 0)
             #await page.click('input[name="Valid_CNX"]')
             #await page.wait_for_load_state('networkidle')
 
             if await page.locator('input[name="LOGIN"]').is_visible():
-                print("❌ Login failed")
+                print("❌\u00A0Login failed")
                 await browser.close()
                 sys.exit(1)
 
             # Save session state
             os.makedirs(os.path.dirname(SESSION_FILE), exist_ok=True)
             await context.storage_state(path=SESSION_FILE)
-            print("✅ Session saved")
+            print("✅\u00A0Session saved")
 
         # GO TO tele_build page
         #await page.goto(f"{args.url}/?function=tele_build")
@@ -286,7 +286,7 @@ async def main():
         ):
             await browser.close()
             sys.exit(1)
-        print("✅ Page tele_build loaded:", page.url)
+        print("✅\u00A0Page tele_build loaded:", page.url)
 
         # CLICK ON WINDOWS
         await page.click('text=Windows')
@@ -305,7 +305,7 @@ async def main():
         csrf_elem = form_custom.locator('input[name^="CSRF_"]').first
         csrf_name = await csrf_elem.get_attribute("name")
         csrf_value = await csrf_elem.get_attribute("value")
-        print(f"🔑 CSRF retrieved: {csrf_name} = {csrf_value}")
+        print(f"🔑\u00A0CSRF retrieved: {csrf_name} = {csrf_value}")
 
         # FILL OUT THE FORM
         # Wait until the NAME field appears
@@ -334,7 +334,7 @@ async def main():
             await page.click('input[type="submit"]', timeout=args.timeout * 1000)
             # Check that the package is present
             await page.wait_for_selector(f'text="{args.name}"', timeout=args.timeout * 1000)
-            print(f"📦 Package successfully submitted: {args.name}")
+            print(f"📦\u00A0Package successfully submitted: {args.name}")
             # Confirmation capture
             await capture(page, "tmp_package_submit_result.png")
 
@@ -342,23 +342,23 @@ async def main():
             #   await page.locator('input[type="submit"]').click(timeout=args.timeout * 1000) 
             ## After browsing, check that the package is present
             #if await page.locator(f"text={args.name}").first.is_visible():
-            #    print(f"📦 Package successfully submitted: {args.name}")
+            #    print(f"📦\u00A0Package successfully submitted: {args.name}")
             #    # Confirmation capture
             #    await capture(page, "tmp_package_submit_result.png")
             #else:
-            #    print(f"❌ Package '{args.name}' not found in the server response!")
+            #    print(f"❌\u00A0Package '{args.name}' not found in the server response!")
             #    await browser.close()
             #    sys.exit(1)
 
         except PlaywrightTimeoutError:
-            print("⏳ Timeout exceeded during file upload (no package name found).")
-            print(f"❌ Package failed: {args.name}")
+            print("⏳\u00A0Timeout exceeded during file upload (no package name found).")
+            print(f"❌\u00A0Package failed: {args.name}")
             await browser.close()
             sys.exit(1)
 
         except PlaywrightError as e:
-            print(f"⚠️ Playwright error during submission: {e}")
-            print(f"❌ Package failed: {args.name}")
+            print(f"⚠️\u00A0Playwright error during submission: {e}")
+            print(f"❌\u00A0Package failed: {args.name}")
             await browser.close()
             sys.exit(1)
 
