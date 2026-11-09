@@ -242,43 +242,31 @@ async def main():
                 print("❌ HTTP:", response.status, response.url)
                 if response.status >= 400 else None
             )
-            # Déclenche le clic sans attendre la fin de la navigation
-            await page.locator('input[name="Valid_CNX"]').evaluate(
-                "(el) => el.click()"
-            )
-
-            # Attend brièvement que la page réagisse
+            # SUBMIT THE FORM AND WAIT FOR THE PAGE TO LOAD
             try:
-                await page.wait_for_load_state(
-                    "domcontentloaded",
-                    timeout=15000
-                )
+                async with page.expect_navigation(
+                    wait_until="domcontentloaded",
+                    timeout=60000
+                ):
+                    await page.locator('input[name="Valid_CNX"]').click()
+
             except PlaywrightTimeoutError:
-                print("⚠️ La page n'a pas terminé son chargement.")
+                print("⚠️ Timeout after submitting the form")
+                print("ℹ️ URL after logging in:", page.url)
+                print("ℹ️ Page title:", await page.title())
 
-            # Displays the resulting status
-            await page.wait_for_timeout(2000)
-            print("ℹ️  URL after logging in:", page.url)
-            print("ℹ️  Page title:", await page.title())
-
-            print("ℹ️  Login form still present:",
-                  await page.locator('input[name="LOGIN"]').count() > 0)
-            #await page.click('input[name="Valid_CNX"]')
-            #await page.wait_for_load_state('networkidle')
-
-            if await page.locator('input[name="LOGIN"]').is_visible():
+            # CHECK TO MAKE SURE YOU'RE LOGGED IN
+            if await page.locator('input[name="LOGIN"]').count() > 0:
                 print("❌ Login failed")
                 await browser.close()
                 sys.exit(1)
 
-            # Save session state
+            # SAVE SESSION STATE
             os.makedirs(os.path.dirname(SESSION_FILE), exist_ok=True)
             await context.storage_state(path=SESSION_FILE)
             print("✅ Session saved")
 
-        # GO TO tele_build page
-        #await page.goto(f"{args.url}/?function=tele_build")
-        #await page.wait_for_load_state('networkidle')
+        # GO TO tele_build PAGE
         if not await safe_goto(
             page,
             f"{args.url}/?function=tele_build",
