@@ -239,7 +239,7 @@ async def main():
                 await browser.close()
                 sys.exit(1)
 
-            print("✅ Successfully navigates to the login form webpage")
+            print("✅ Successfully cross the login form")
 
             # ACTUALLY VERIFY ACCESS TO TELE_BUILD
             if not await safe_goto(page, tele_build_url, timeout=60000):
