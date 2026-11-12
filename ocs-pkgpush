@@ -87,8 +87,7 @@ def try_get_credentials_from_secretstorage(url: str):
             try:
                 collection.unlock()
             except Exception:
-                continue  # on ignore les collections non accessibles
-        #print("NAME: ", collection.get_label())
+                continue  # We ignore collections that are not accessible
 
         items = list(collection.search_items({"URL": url}))
         if not items:
@@ -118,7 +117,7 @@ def try_get_credentials_from_secretstorage(url: str):
 
             return username, password
 
-    # rien trouvé dans aucune collection
+    # Nothing found in any collection
     return None, None
 
 async def safe_goto(page, url, timeout=30000):
@@ -141,30 +140,6 @@ async def safe_goto(page, url, timeout=30000):
         print("💡 Check if the server is reachable and if VPN is active.")
         return False
 
-async def session_is_valid(url):
-    """
-    Check if the saved session is still valid.
-    Returns:
-      - True  => session valid
-      - False => session saved but invalid (login form present)
-      - None  => server unreachable / network error
-    """
-    if not os.path.exists(SESSION_FILE):
-        return False
-
-    async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=True, args=["--ignore-certificate-errors"])
-        context = await browser.new_context(storage_state=SESSION_FILE, ignore_https_errors=True)
-        page = await context.new_page()
-
-        if not await safe_goto(page, f"{url}/?function=tele_build", timeout=15000):
-            await browser.close()
-            return None  # server unreachable
-
-        valid = not await page.locator('input[name="LOGIN"]').is_visible()
-        await browser.close()
-        return valid
-
 async def main():
     parser = argparse.ArgumentParser(prog="ocs-pkgpush", description="Push a package to OCS Inventory")
     parser.add_argument("--url", required=True, help="OCS Inventory URL (e.g. https://server/ocsreports)")
@@ -185,12 +160,12 @@ async def main():
     parser.add_argument("--clean-cache", action="store_true", help="Clean cache and remove cached Playwright environment")
     args = parser.parse_args()
 
-    # Check if the file to upload exists
+    # CHECK IF THE FILE TO UPLOAD EXISTS
     if not os.path.isfile(args.file):
         print(f"❌ Error: file '{args.file}' not found.")
         sys.exit(1)
 
-    # Prepare capture directory if requested
+    # PREPARE CAPTURE DIRECTORY IF REQUESTED
     capture_dir = None
     if args.capture_dir:
         capture_dir = Path(args.capture_dir)
@@ -202,19 +177,42 @@ async def main():
             await page.screenshot(path=str(path))
             print(f"📸 Screenshot saved: {path}")
 
-    valid_state = await session_is_valid(args.url)
-
+    # --- BROWSER / SESSION ---
     async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=args.headless, args=["--ignore-certificate-errors"])
-        if valid_state is None:
-            # Network/server problem detected while checking session → abort early
+        browser = await p.chromium.launch(
+            headless=args.headless,
+            args=["--ignore-certificate-errors"]
+        )
+
+        # LOAD THE EXISTING SESSION IF AVAILABLE
+        if os.path.isfile(SESSION_FILE):
+            context = await browser.new_context(
+                storage_state=SESSION_FILE,
+                ignore_https_errors=True
+            )
+        else:
+            context = await browser.new_context(
+                ignore_https_errors=True
+            )
+
+        page = await context.new_page()
+
+        # TEST ACCESS TO TELE_BUILD DIRECTLY
+        tele_build_url = f"{args.url}/?function=tele_build"
+
+        if not await safe_goto(page, tele_build_url, timeout=60000):
             await browser.close()
             sys.exit(1)
-        elif valid_state is True:
-            print("♻️  Existing valid session → reusing")
-            context = await browser.new_context(storage_state=SESSION_FILE, ignore_https_errors=True)
-            page = await context.new_page()
-        else:
+
+        login_form = page.locator('input[name="LOGIN"]')
+
+        try:
+            await login_form.wait_for(state="visible", timeout=5000)
+            login_required = True
+        except PlaywrightTimeoutError:
+            login_required = False
+
+        if login_required:
             print("🔐 Invalid or missing session → login required")
             user_ss, pwd_ss = try_get_credentials_from_secretstorage(args.url)
             if user_ss and pwd_ss:
@@ -227,53 +225,44 @@ async def main():
                 if not args.password:
                     args.password = prompt_from_tty("🔑 OCS password: ", hide=True)
 
-            context = await browser.new_context(ignore_https_errors=True)
-            page = await context.new_page()
-            if not await safe_goto(page, args.url):
-                await browser.close()
-                sys.exit(1)
             await page.fill('input[name="LOGIN"]', args.username)
             await page.fill('input[name="PASSWD"]', args.password)
-            page.on("requestfailed", lambda req:
-                print("❌ REQUEST FAILED:", req.url, req.failure)
-                )
+            await page.locator('input[name="Valid_CNX"]').click()
 
-            page.on("response", lambda response:
-                print("❌ HTTP:", response.status, response.url)
-                if response.status >= 400 else None
-            )
-            # SUBMIT THE FORM AND WAIT FOR THE PAGE TO LOAD
             try:
-                async with page.expect_navigation(
-                    wait_until="domcontentloaded",
-                    timeout=60000
-                ):
-                    await page.locator('input[name="Valid_CNX"]').click()
-
+                await login_form.wait_for(state="hidden", timeout=30000)
             except PlaywrightTimeoutError:
-                print("⚠️ Timeout after submitting the form")
-                print("ℹ️ URL after logging in:", page.url)
-                print("ℹ️ Page title:", await page.title())
-
-            # CHECK TO MAKE SURE YOU'RE LOGGED IN
-            if await page.locator('input[name="LOGIN"]').count() > 0:
-                print("❌ Login failed")
+                print("❌ The login form is still there")
+                print("ℹ️  URL after logging in:", page.url)
+                print("ℹ️  Page title:", await page.title())
+                await capture(page, "tmp_login_failure.png")
                 await browser.close()
                 sys.exit(1)
 
-            # SAVE SESSION STATE
+            print("✅ Successfully navigates to the login form webpage")
+
+            # ACTUALLY VERIFY ACCESS TO TELE_BUILD
+            if not await safe_goto(page, tele_build_url, timeout=60000):
+                await browser.close()
+                sys.exit(1)
+
+            try:
+                await page.locator('input[name="LOGIN"]').wait_for(
+                    state="visible", timeout=3000
+                )
+                print("❌ Authentication not retained")
+                await browser.close()
+                sys.exit(1)
+            except PlaywrightTimeoutError:
+                pass
+
+            # SAVE SESSION STATE AFTER VERIFICATION
             os.makedirs(os.path.dirname(SESSION_FILE), exist_ok=True)
             await context.storage_state(path=SESSION_FILE)
             print("✅ Session saved")
 
-        # GO TO tele_build PAGE
-        if not await safe_goto(
-            page,
-            f"{args.url}/?function=tele_build",
-            timeout=60000,
-        ):
-            await browser.close()
-            sys.exit(1)
+        else:
+            print("♻️  Existing valid session → reusing")
         print("✅ Page tele_build loaded:", page.url)
 
         # CLICK ON WINDOWS
@@ -288,25 +277,30 @@ async def main():
         await page.click('text=Custom')
         await page.wait_for_load_state('networkidle')
 
+        # WAIT FOR THE CUSTOM FORM
+        await page.locator('input[name="NAME"]').wait_for(state="visible", timeout=30000)
+
         # GET THE CSRF TOKEN ONLY FROM THE CUSTOM FORM
         form_custom = page.locator("form").filter(has=page.locator('input[name="NAME"]'))
         csrf_elem = form_custom.locator('input[name^="CSRF_"]').first
+        await csrf_elem.wait_for(state="attached", timeout=10000)
         csrf_name = await csrf_elem.get_attribute("name")
         csrf_value = await csrf_elem.get_attribute("value")
+        if not csrf_name or not csrf_value:
+            raise RuntimeError("CSRF token absent ou vide")
         print(f"🔑 CSRF retrieved: {csrf_name} = {csrf_value}")
 
         # FILL OUT THE FORM
         # Wait until the NAME field appears
-        await page.wait_for_selector('input[name="NAME"]', timeout=10000)
         await page.fill('input[name="NAME"]', args.name)
         await page.fill('input[name="DESCRIPTION"]', args.description)
         await page.select_option('select[name="PROTO"]', 'HTTP')
         await page.select_option('select[name="PRI"]', str(args.priority))
         await page.select_option('select[name="ACT"]', 'EXECUTE')
         await page.fill('input[name="pathfile"]', 'install.bat')
-        # File upload
+        # FILE UPLOAD
         await page.set_input_files('input[name="additionalfiles"]', args.file)
-        # Notification
+        # NOTIFICATION
         await page.select_option('select[name="NOTIFY_USER"]', args.notify)
         if args.notify == 'YES':
             await page.fill('input[name="NOTIFY_TEXT"]', args.notif_text)
@@ -325,18 +319,6 @@ async def main():
             print(f"📦 Package successfully submitted: {args.name}")
             # Confirmation capture
             await capture(page, "tmp_package_submit_result.png")
-
-            #async with page.expect_navigation(timeout=args.timeout * 1000):
-            #   await page.locator('input[type="submit"]').click(timeout=args.timeout * 1000) 
-            ## After browsing, check that the package is present
-            #if await page.locator(f"text={args.name}").first.is_visible():
-            #    print(f"📦 Package successfully submitted: {args.name}")
-            #    # Confirmation capture
-            #    await capture(page, "tmp_package_submit_result.png")
-            #else:
-            #    print(f"❌ Package '{args.name}' not found in the server response!")
-            #    await browser.close()
-            #    sys.exit(1)
 
         except PlaywrightTimeoutError:
             print("⏳ Timeout exceeded during file upload (no package name found).")
