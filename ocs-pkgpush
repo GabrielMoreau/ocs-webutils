@@ -50,6 +50,7 @@ source "$CACHE_DIR/ocs-utils/venv/bin/activate"
 exec python3 - "$@" <<'END_PYTHON'
 import os
 import sys
+import time
 import argparse
 import getpass
 import asyncio
@@ -185,7 +186,7 @@ async def main():
         )
 
         # LOAD THE EXISTING SESSION IF AVAILABLE
-        if os.path.isfile(SESSION_FILE):
+        if os.path.isfile(SESSION_FILE) and (time.time() - os.path.getmtime(SESSION_FILE)) < 3 * 3600:
             context = await browser.new_context(
                 storage_state=SESSION_FILE,
                 ignore_https_errors=True
